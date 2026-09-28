@@ -231,3 +231,8 @@ details.acc > div { padding: 0 14px 12px; }
 .fade { animation: fade .22s ease; }
 @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .fade, .confetti i { animation: none; } }
+
+/* iPhone notch / status bar (home-screen mode): keep top controls visible */
+.topbar { padding-top: calc(10px + env(safe-area-inset-top)); padding-inline: calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-left)); }
+.examhead { padding-top: calc(10px + env(safe-area-inset-top)); }
+body.in-exam main { padding-top: 16px; }
