@@ -563,7 +563,7 @@
   function confetti() {
     var box = document.createElement('div');
     box.className = 'confetti';
-    var colors = ['#14b8a6', '#f59e0b', '#ec4899', '#6366f1', '#22c55e'];
+    var colors = ['#8b7cf6', '#f59e0b', '#ec4899', '#6366f1', '#22c55e'];
     for (var i = 0; i < 80; i++) {
       var p = document.createElement('i');
       p.style.left = Math.random() * 100 + '%';
