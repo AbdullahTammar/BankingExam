@@ -69,7 +69,7 @@ p { margin: 0 0 .8em; }
 .nav button { background: none; border: 0; padding: 8px 12px; border-radius: 10px; color: var(--muted); font-weight: 700; }
 .nav button.on, .nav button:hover { background: var(--primary-soft); color: var(--primary); }
 .bottomnav {
-  position: fixed; bottom: 0; inset-inline: 0; z-index: 20; display: grid; grid-template-columns: repeat(5, 1fr);
+  position: fixed; bottom: 0; inset-inline: 0; z-index: 20; display: grid; grid-template-columns: repeat(6, 1fr);
   background: var(--surface); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom);
 }
 .bottomnav button { background: none; border: 0; padding: 8px 0 10px; font-size: .75rem; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px; }

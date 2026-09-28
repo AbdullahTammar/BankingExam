@@ -8,6 +8,10 @@
 
   var byId = {};
   QB.forEach(function (q) { byId[q.id] = q; });
+  var OLDQ = (window.OLD || []).map(function (x, i) {
+    var q = { id: 'old-' + (i + 1), c: x[0], q: x[1], o: x[2], a: [].concat(x[3]), e: x[4], r: x[5], note: x[6] || '' };
+    byId[q.id] = q; return q;
+  });
   var chapterOf = {};
   CHAPTERS.forEach(function (c) { chapterOf[c.n] = c; });
 
@@ -122,6 +126,8 @@
       var pool = [];
       opts.chapters.forEach(function (ch) { pool = pool.concat(QB.filter(function (q) { return q.c === ch; })); });
       qs = shuffle(pool).slice(0, opts.count || pool.length);
+    } else if (opts.type === 'old') {
+      qs = OLDQ.slice();
     } else if (opts.type === 'mistakes') {
       qs = shuffle(opts.ids.map(function (id) { return byId[id]; })).slice(0, opts.count || 999);
     } else { // quick mix
@@ -165,7 +171,6 @@
       '<section class="hero">' +
         '<h1>' + greet + ' يا جنى 👋</h1>' +
         '<p>' + QB.length + ' سؤالاً من كل صفحة في الكتاب، بنفس مستوى الاختبار الحقيقي أو أصعب.</p>' +
-        '<div class="trust">🤍 Abdullah Trusts you — عبدالله واثق فيك</div>' +
         '<div class="stats">' +
           '<div class="stat"><b>' + H.length + '</b><span>اختبار منجز</span></div>' +
           '<div class="stat"><b>' + (H.length ? best + '%' : '—') + '</b><span>أفضل نتيجة</span></div>' +
@@ -176,6 +181,7 @@
         '<button class="mode" data-act="full"><span class="ic">📝</span><span><h3>اختبار شامل (100 سؤال)</h3><p>نفس توزيع الاختبار الحقيقي على الفصول العشرة، ' + FULL_MINUTES + ' دقيقة، النجاح ' + PASS + '%.</p></span></button>' +
         '<button class="mode" data-go="chapters"><span class="ic">📚</span><span><h3>اختبار حسب الفصل</h3><p>اختاري فصلاً أو أكثر، وعدد الأسئلة، ووضع الاختبار أو التدريب الفوري.</p></span></button>' +
         '<button class="mode" data-act="quick"><span class="ic">⚡</span><span><h3>تدريب سريع (20 سؤالاً)</h3><p>أسئلة عشوائية من كل الكتاب مع التصحيح الفوري بعد كل سؤال.</p></span></button>' +
+        '<button class="mode" data-go="old"><span class="ic">🗂️</span><span><h3>الاختبار السابق (' + OLDQ.length + ' سؤالاً)</h3><p>كل أسئلة الاختبار الحقيقي السابق مع الإجابة الصحيحة والشرح والمصدر من الكتاب.</p></span></button>' +
         '<button class="mode" data-go="mistakes"><span class="ic">🔁</span><span><h3>بنك أخطائي <span class="pill ' + (mcount ? 'warn' : 'ok') + '">' + mcount + '</span></h3><p>كل سؤال أخطأتِ فيه يبقى هنا حتى تجيبي عليه صح مرتين متتاليتين.</p></span></button>' +
       '</div>' +
       '<div class="card tip" style="margin-top:14px"><span class="ic">' + tip.i + '</span><div><h3>' + esc(tip.t) + '</h3><p class="muted" style="margin:0">' + esc(tip.d) + '</p></div></div>' +
@@ -263,6 +269,34 @@
           '<div class="row" style="margin-top:14px"><button class="btn" data-act="mist" data-p="1">🎯 راجعيها بتدريب فوري</button><button class="btn ghost" data-act="mist" data-p="0">📝 كاختبار</button></div></div>'
         : '<div class="card empty"><div class="big">🌟</div><h2>لا توجد أخطاء حالياً</h2><p>ابدئي اختباراً، وأي سؤال تخطئين فيه سيظهر هنا لتراجعيه.</p><button class="btn" data-act="full">ابدئي اختباراً شاملاً</button></div>') +
       footer(), 'mistakes');
+  }
+
+  function oldExam(filter) {
+    filter = filter || 0;
+    var list = OLDQ.filter(function (q) { return !filter || q.c === filter; });
+    var chs = CHAPTERS.filter(function (c) { return OLDQ.some(function (q) { return q.c === c.n; }); });
+    var fixed = OLDQ.filter(function (q) { return q.note; }).length;
+    var cards = list.map(function (q) {
+      var opts = q.o.map(function (o, k) {
+        var ok = q.a.indexOf(k) >= 0;
+        return '<div class="opt' + (q.a.length > 1 ? ' sq' : '') + (ok ? ' right' : '') + '"><span class="mk">' + (ok ? '✓' : LETTERS[k]) + '</span><span>' + esc(o) + '</span></div>';
+      }).join('');
+      return '<div class="qcard" style="margin-bottom:12px"><div class="qmeta"><span class="qnum">' + q.id.slice(4) + '</span><span class="pill">الفصل ' + q.c + '</span>' +
+        (q.note ? '<span class="pill warn">⚠️ تصحيح</span>' : '') + '</div><div class="qtext">' + esc(q.q) + '</div><div class="opts">' + opts + '</div>' +
+        (q.note ? '<div class="explain bad"><b>⚠️ انتبهي</b><p style="margin:6px 0 0">' + esc(q.note) + '</p></div>' : '') +
+        '<div class="explain"><b>💡 الشرح</b><p style="margin:6px 0 0">' + esc(q.e) + '</p><span class="ref">📖 المصدر: ' + esc(q.r) + '</span></div></div>';
+    }).join('');
+    render(
+      '<h1>🗂️ الاختبار السابق</h1>' +
+      '<div class="card"><p>هذه أسئلة الاختبار الحقيقي السابق (' + OLDQ.length + ' سؤالاً بعد حذف المكرر)، مع الإجابة الصحيحة حسب الكتاب والشرح والمصدر.</p>' +
+      '<p class="muted small">في ' + fixed + ' أسئلة كانت الإجابة المعلَّمة في الصور مخالفة للكتاب، وصحّحناها ووضعنا عليها علامة ⚠️.</p>' +
+      '<div class="row"><button class="btn" data-act="oldtest" data-p="0">📝 اختبري نفسك بها</button><button class="btn ghost" data-act="oldtest" data-p="1">🎯 تدريب فوري</button></div></div>' +
+      '<div class="filters" id="of"><button data-f="0" class="' + (!filter ? 'on' : '') + '">الكل</button>' +
+      chs.map(function (c) { return '<button data-f="' + c.n + '" class="' + (filter === c.n ? 'on' : '') + '">الفصل ' + c.n + '</button>'; }).join('') + '</div>' +
+      cards + footer(), 'old');
+    document.getElementById('of').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (b) oldExam(+b.getAttribute('data-f'));
+    });
   }
 
   function tips() {
@@ -602,7 +636,7 @@
     if (go && !modal.contains(go)) {
       var v = go.getAttribute('data-go');
       if (document.body.classList.contains('in-exam')) return;
-      ({ home: home, chapters: chapters, mistakes: mistakes, tips: tips, history: history })[v]();
+      ({ home: home, chapters: chapters, mistakes: mistakes, tips: tips, history: history, old: function () { oldExam(0); } })[v]();
       return;
     }
     if (document.body.classList.contains('in-exam') && app.contains(e.target)) { examClick(e); return; }
@@ -617,6 +651,7 @@
     } else if (act === 'quick') startExam({ type: 'quick', title: 'تدريب سريع', count: 20, practice: true });
     else if (act === 'chapter') chapterSetup([+b.getAttribute('data-ch')]);
     else if (act === 'multi') multiPicker();
+    else if (act === 'oldtest') startExam({ type: 'old', title: 'الاختبار السابق', practice: b.getAttribute('data-p') === '1', minutes: b.getAttribute('data-p') === '1' ? 0 : OLDQ.length });
     else if (act === 'resume') showExam();
     else if (act === 'discard') confirmBox('إلغاء الاختبار؟', 'لن تُحفظ نتيجة هذا الاختبار.', 'إلغاء الاختبار', function () { S.active = null; save(); home(); });
     else if (act === 'mist') {
