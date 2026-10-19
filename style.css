@@ -236,3 +236,46 @@ details.acc > div { padding: 0 14px 12px; }
 .topbar { padding-top: calc(10px + env(safe-area-inset-top)); padding-inline: calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-left)); }
 .examhead { padding-top: calc(10px + env(safe-area-inset-top)); }
 body.in-exam main { padding-top: 16px; }
+
+/* ---------- certificate tracks (retail banking / credit advisor) ---------- */
+.switch {
+  flex: none; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface-2);
+  border-radius: 99px; padding: 6px 12px; font-weight: 700; font-size: .85rem; white-space: nowrap;
+}
+.switch:hover { border-color: var(--primary); color: var(--primary); }
+@media (max-width: 420px) { .switch span { display: none; } .brand small { max-width: 52vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } }
+body.on-landing .bottomnav, body.on-landing .nav, body.on-landing .switch { display: none; }
+body.on-landing { padding-bottom: 24px; }
+.nav { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.nav::-webkit-scrollbar { display: none; }
+.nav button { white-space: nowrap; padding: 8px 10px; }
+.topbar { flex-wrap: nowrap; }
+.brand { min-width: 0; }
+.bottomnav button { min-width: 0; padding-inline: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trackbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.trackcard {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: start; background: var(--surface); border: 2px solid var(--line);
+  border-radius: 20px; padding: 18px; box-shadow: var(--shadow); min-height: 120px;
+}
+.trackcard:hover, .trackcard.on { border-color: var(--primary); }
+.trackcard .ic { font-size: 2.4rem; width: 68px; height: 68px; flex: none; display: grid; place-items: center; border-radius: 18px; background: var(--primary-soft); }
+.trackcard .body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.trackcard .body b { font-size: 1.2rem; }
+.scen-mini { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--accent-soft); }
+.scen-mini b { color: var(--accent); }
+.explain.story { border-inline-start-color: var(--accent); background: var(--accent-soft); }
+details.scen summary { display: flex; gap: 8px; align-items: center; padding-inline-end: 34px; position: relative; }
+details.scen summary::after { position: absolute; inset-inline-end: 14px; float: none; }
+details.scen .explain { margin-top: 8px; }
+details.scen .ref { display: block; margin-top: 10px; font-size: .88rem; color: var(--muted); }
+.tblwrap { overflow-x: auto; margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; }
+table.cmp { min-width: 420px; }
+table.cmp th, table.cmp td { vertical-align: top; padding: 8px 10px; }
+table.cmp tr:first-child th { background: var(--primary-soft); color: var(--primary); }
+table.cmp tr th:first-child { color: var(--text); white-space: nowrap; }
+.search {
+  width: 100%; font: inherit; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);
+}
+.search:focus { outline: 2px solid var(--primary); border-color: var(--primary); }
+.qtext, .opt span, .explain p { overflow-wrap: anywhere; }
+details.scen summary .pill { flex: none; white-space: nowrap; }

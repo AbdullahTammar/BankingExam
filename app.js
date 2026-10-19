@@ -3,17 +3,66 @@
 
   var PASS = 75;               // pass mark (real exam is 65 — we train harder)
   var FULL_MINUTES = 100;      // 100 questions in 100 minutes
-  var STORE_KEY = 'jana.bank.v1';
+  var TRACK_KEY = 'jana.track';
   var LETTERS = ['أ', 'ب', 'ج', 'د', 'هـ', 'و'];
+  var CRD = window.CR || {};
 
-  var byId = {};
-  QB.forEach(function (q) { byId[q.id] = q; });
-  var OLDQ = (window.OLD || []).map(function (x, i) {
-    var q = { id: 'old-' + (i + 1), c: x[0], q: x[1], o: x[2], a: [].concat(x[3]), e: x[4], r: x[5], note: x[6] || '' };
-    byId[q.id] = q; return q;
-  });
-  var chapterOf = {};
-  CHAPTERS.forEach(function (c) { chapterOf[c.n] = c; });
+  // Each certificate (book + exam) is a separate track with its own data and its own saved progress.
+  var TRACKS = {
+    retail: {
+      key: 'retail', icon: '🏦', name: 'الخدمات المصرفية للأفراد', book: 'كتاب الخدمات المصرفية للأفراد',
+      store: 'jana.bank.v1', QB: window.QB, CHAPTERS: window.CHAPTERS, TIPS: window.TIPS, NUMBERS: window.NUMBERS, OLD: window.OLD || [],
+      nav: ['home', 'chapters', 'old', 'mistakes', 'tips', 'history'], bottom: ['home', 'chapters', 'old', 'mistakes', 'tips', 'history'],
+      traps: [
+        ['النوافذ الإسلامية', '«غير مستقلة» قانونياً. أي خيار فيه «مستقلة» خطأ.'],
+        ['الراتب والدخل', 'نسب التحمل تُحسب من إجمالي «الدخل الشهري» والاستقطاع من إجمالي «الراتب». لا تخلطي بينهما.'],
+        ['الشيك', 'حروف مقابل أرقام: الحروف. تكرار واختلاف: الأقل.'],
+        ['القاصر', 'السنوات «هجرية» وليست ميلادية.'],
+        ['يوم عمل ويوم تقويمي', 'التمويل الاستهلاكي: الانسحاب خلال 10 أيام «عمل». بطاقة الائتمان: الإلغاء خلال 10 أيام. التعثر 90 يوماً «تقويمياً».'],
+        ['مراحل غسل الأموال', 'إيداع ← تغطية ← دمج. أما تمويل الإرهاب فمراحله: جمع ← نقل ← استخدام.'],
+        ['المضاربة والمشاركة', 'المضاربة: رب المال وحده يتحمل الخسارة. المشاركة: كل شريك بقدر حصته.'],
+        ['التورق والتوريق', 'التورق = سيولة (شراء آجل وبيع نقدي). التوريق/التصكيك = إصدار صكوك.'],
+        ['المركزي والحكومة', 'البنك المركزي «مصرف الحكومة»، لكن «إقراض الحكومة» محظور عليه.'],
+        ['من يعتمد ماذا', 'سياسة الالتزام يعتمدها مجلس الإدارة. الإدارة الفعالة للمخاطر على الإدارة العليا. إدارة الالتزام تضع السياسة وتساعد.']
+      ],
+      plan: [
+        ['الأسبوع الأول', 'الفصل 2 كاملاً (25% من الاختبار): اختبار فصل بوضع التدريب الفوري يومياً + جدول الأرقام.'],
+        ['الأسبوع الثاني', 'الفصول 10 ثم 4 ثم 6 (35% من الاختبار). راجعي بنك الأخطاء نهاية كل يوم.'],
+        ['الأسبوع الثالث', 'الفصول 1، 3، 5، 7، 8، 9. ثم اختبار شامل كل يومين.'],
+        ['آخر 3 أيام', 'اختبار شامل يومياً، ثم بنك الأخطاء، ثم جدول الأرقام. ليلة الاختبار: مراجعة خفيفة ونوم مبكر.']
+      ]
+    },
+    credit: {
+      key: 'credit', icon: '💳', name: 'المستشار الائتماني', book: 'كتاب المستشار الائتماني (الإصدار الرابع)',
+      store: 'jana.credit.v1', QB: CRD.QB || [], CHAPTERS: CRD.CHAPTERS || [], TIPS: CRD.TIPS || [], NUMBERS: CRD.NUMBERS || [], OLD: CRD.OLD || [],
+      SCEN: CRD.SCEN || [], traps: CRD.TRAPS || [], plan: CRD.PLAN || [], mocks: 6,
+      nav: ['home', 'chapters', 'scen', 'bank', 'old', 'mistakes', 'tips', 'history'], bottom: ['home', 'chapters', 'scen', 'bank', 'mistakes', 'history']
+    }
+  };
+  var NAV = {
+    home: ['🏠', 'الرئيسية'], chapters: ['📚', 'الفصول'], old: ['🗂️', 'الاختبار السابق', 'السابق'], mistakes: ['🔁', 'أخطائي'],
+    tips: ['💡', 'نصائح'], history: ['📈', 'سجلي'], scen: ['🎬', 'السيناريوهات', 'سيناريو'], bank: ['📖', 'بنك الأسئلة', 'الأسئلة']
+  };
+
+  var T, QB, CHAPTERS, TIPS, NUMBERS, OLDQ, STORE_KEY, byId, chapterOf, S;
+  function useTrack(key, persist) {
+    T = TRACKS[key] || TRACKS.retail;
+    QB = T.QB; CHAPTERS = T.CHAPTERS; TIPS = T.TIPS; NUMBERS = T.NUMBERS; STORE_KEY = T.store;
+    byId = {};
+    QB.forEach(function (q) { byId[q.id] = q; });
+    OLDQ = T.OLD.map(function (x, i) {
+      var q = { id: 'old-' + (i + 1), c: x[0], q: x[1], o: x[2], a: [].concat(x[3]), e: x[4], r: x[5], note: x[6] || '', s: x[7] || '', src: x[8] || 0 };
+      byId[q.id] = q; return q;
+    });
+    chapterOf = {};
+    CHAPTERS.forEach(function (c) { chapterOf[c.n] = c; });
+    S = load();
+    if (persist) { try { localStorage.setItem(TRACK_KEY, T.key); } catch (e) { /* ignore */ } }
+    renderNav();
+  }
+  function savedTrack() {
+    try { var k = localStorage.getItem(TRACK_KEY); return TRACKS[k] ? k : null; } catch (e) { return null; }
+  }
 
   // ---------------- storage ----------------
   function load() {
@@ -29,7 +78,6 @@
     s.active = s.active || null;
     return s;
   }
-  var S = load();
   function save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* ignore */ }
   }
@@ -54,6 +102,14 @@
     return a;
   }
   function range(n) { var r = []; for (var i = 0; i < n; i++) r.push(i); return r; }
+  function seeded(seed) { // small deterministic PRNG (mulberry32) so each mock exam keeps the same questions
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      var t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
   function pct(a, b) { return b ? Math.round(a / b * 100) : 0; }
   function fmtTime(sec) {
     sec = Math.max(0, Math.round(sec));
@@ -88,11 +144,24 @@
   }
   function barClass(p) { return p >= PASS ? '' : p >= 55 ? 'mid' : 'low'; }
 
+  function renderNav() {
+    document.querySelector('.nav').innerHTML = T.nav.map(function (k) {
+      return '<button data-go="' + k + '">' + NAV[k][1] + '</button>';
+    }).join('');
+    var bottom = document.querySelector('.bottomnav');
+    bottom.innerHTML = T.bottom.map(function (k) {
+      return '<button data-go="' + k + '"><span>' + NAV[k][0] + '</span>' + (NAV[k][2] || NAV[k][1]) + '</button>';
+    }).join('');
+    bottom.style.gridTemplateColumns = 'repeat(' + T.bottom.length + ', 1fr)';
+    document.getElementById('trackName').textContent = T.icon + ' ' + T.name;
+  }
+
   function setNav(view) {
     document.querySelectorAll('[data-go]').forEach(function (b) {
       b.classList.toggle('on', b.getAttribute('data-go') === view);
     });
     document.body.classList.toggle('in-exam', view === 'exam');
+    document.body.classList.toggle('on-landing', view === 'tracks');
   }
   function render(html, view) {
     stopTimer();
@@ -126,6 +195,15 @@
       var pool = [];
       opts.chapters.forEach(function (ch) { pool = pool.concat(QB.filter(function (q) { return q.c === ch; })); });
       qs = shuffle(pool).slice(0, opts.count || pool.length);
+    } else if (opts.type === 'mock') {
+      // Fixed mock exam: the same 100 questions for a given mock number (seeded), in a new order every attempt.
+      var rnd = seeded(opts.seed * 7919 + 17);
+      qs = [];
+      CHAPTERS.forEach(function (c) {
+        var pool = QB.filter(function (q) { return q.c === c.n; });
+        for (var i = pool.length - 1; i > 0; i--) { var j = Math.floor(rnd() * (i + 1)); var t = pool[i]; pool[i] = pool[j]; pool[j] = t; }
+        qs = qs.concat(pool.slice(0, c.w));
+      });
     } else if (opts.type === 'old') {
       qs = OLDQ.slice();
     } else if (opts.type === 'mistakes') {
@@ -135,7 +213,7 @@
     }
     qs = shuffle(qs);
     return {
-      type: opts.type, title: opts.title, practice: !!opts.practice, chapters: opts.chapters || null,
+      type: opts.type, title: opts.title, practice: !!opts.practice, chapters: opts.chapters || null, seed: opts.seed || 0,
       qs: qs.map(function (q) { return { id: q.id, order: shuffle(range(q.o.length)) }; }),
       answers: {}, checked: {}, flags: {}, cur: 0,
       start: Date.now(), limit: opts.minutes ? opts.minutes * 60 : 0
@@ -167,10 +245,20 @@
         '<button class="btn sm" data-act="resume">أكملي</button><button class="btn sm ghost" data-act="discard">إلغاء</button></div></div></div>';
     }
 
+    var extra = '';
+    if (T.key === 'credit') {
+      extra =
+        '<button class="mode" data-act="mocks"><span class="ic">🧪</span><span><h3>نماذج اختبارات (' + T.mocks + ' نماذج)</h3><p>نماذج ثابتة من 100 سؤال بنفس توزيع الاختبار الحقيقي، لتقيسي تقدمك نموذجاً بعد نموذج.</p></span></button>' +
+        '<button class="mode" data-go="scen"><span class="ic">🎬</span><span><h3>السيناريوهات (' + T.SCEN.length + ')</h3><p>كل تعريف وفكرة في الكتاب بقصة بسيطة ومقارنة سهلة، مع رقم الصفحة.</p></span></button>' +
+        '<button class="mode" data-go="bank"><span class="ic">📖</span><span><h3>بنك الأسئلة والإجابات</h3><p>كل الأسئلة مع الإجابة الصحيحة ولماذا، وسيناريو بسيط، ورقم الصفحة في الكتاب.</p></span></button>' +
+        '<button class="mode" data-go="tips"><span class="ic">💡</span><span><h3>نصائح وأرقام لا تُنسى</h3><p>أشهر الفخاخ، وجدول الأرقام مع الصفحات، وخطة مذاكرة.</p></span></button>';
+    }
+
     render(
+      '<div class="trackbar"><span class="pill">' + T.icon + ' ' + esc(T.name) + '</span><button class="btn sm ghost" data-go="tracks">🔀 تغيير الاختبار</button></div>' +
       '<section class="hero">' +
         '<h1>' + greet + ' يا جنى 👋</h1>' +
-        '<p>' + QB.length + ' سؤالاً من كل صفحة في الكتاب، بنفس مستوى الاختبار الحقيقي أو أصعب.</p>' +
+        '<p>' + QB.length + ' سؤالاً من ' + esc(T.book) + '، بنفس مستوى الاختبار الحقيقي أو أصعب.</p>' +
         '<div class="stats">' +
           '<div class="stat"><b>' + H.length + '</b><span>اختبار منجز</span></div>' +
           '<div class="stat"><b>' + (H.length ? best + '%' : '—') + '</b><span>أفضل نتيجة</span></div>' +
@@ -178,11 +266,14 @@
         '</div>' +
       '</section>' + resume +
       '<div class="grid two">' +
-        '<button class="mode" data-act="full"><span class="ic">📝</span><span><h3>اختبار شامل (100 سؤال)</h3><p>نفس توزيع الاختبار الحقيقي على الفصول العشرة، ' + FULL_MINUTES + ' دقيقة، النجاح ' + PASS + '%.</p></span></button>' +
+        '<button class="mode" data-act="full"><span class="ic">📝</span><span><h3>اختبار شامل (100 سؤال)</h3><p>نفس توزيع الاختبار الحقيقي على الفصول ال' + (CHAPTERS.length === 10 ? 'عشرة' : 'خمسة') + '، أسئلة عشوائية جديدة كل مرة، ' + FULL_MINUTES + ' دقيقة، النجاح ' + PASS + '%.</p></span></button>' +
         '<button class="mode" data-go="chapters"><span class="ic">📚</span><span><h3>اختبار حسب الفصل</h3><p>اختاري فصلاً أو أكثر، وعدد الأسئلة، ووضع الاختبار أو التدريب الفوري.</p></span></button>' +
         '<button class="mode" data-act="quick"><span class="ic">⚡</span><span><h3>تدريب سريع (20 سؤالاً)</h3><p>أسئلة عشوائية من كل الكتاب مع التصحيح الفوري بعد كل سؤال.</p></span></button>' +
-        '<button class="mode" data-go="old"><span class="ic">🗂️</span><span><h3>الاختبار السابق (' + OLDQ.length + ' سؤالاً)</h3><p>كل أسئلة الاختبار الحقيقي السابق مع الإجابة الصحيحة والشرح والمصدر من الكتاب.</p></span></button>' +
+        '<button class="mode" data-go="old"><span class="ic">🗂️</span><span><h3>الاختبار السابق (' + OLDQ.length + ' سؤالاً)</h3><p>' + (T.key === 'credit'
+          ? 'أسئلة محاولتك الأولى في الاختبار الحقيقي وأسئلة الاختبار التجريبي، مع الإجابة الصحيحة من الكتاب والسيناريو والصفحة.'
+          : 'كل أسئلة الاختبار الحقيقي السابق مع الإجابة الصحيحة والشرح والمصدر من الكتاب.') + '</p></span></button>' +
         '<button class="mode" data-go="mistakes"><span class="ic">🔁</span><span><h3>بنك أخطائي <span class="pill ' + (mcount ? 'warn' : 'ok') + '">' + mcount + '</span></h3><p>كل سؤال أخطأتِ فيه يبقى هنا حتى تجيبي عليه صح مرتين متتاليتين.</p></span></button>' +
+        extra +
       '</div>' +
       '<div class="card tip" style="margin-top:14px"><span class="ic">' + tip.i + '</span><div><h3>' + esc(tip.t) + '</h3><p class="muted" style="margin:0">' + esc(tip.d) + '</p></div></div>' +
       '<p class="muted small">* الجاهزية = متوسط آخر 3 اختبارات شاملة. هدفنا: فوق 80% ثلاث مرات متتالية.</p>' +
@@ -271,31 +362,149 @@
       footer(), 'mistakes');
   }
 
+  // Static card showing a question with its correct answer, why, scenario and page (used by the old-exam and question-bank pages).
+  function answerCard(q, num) {
+    var opts = q.o.map(function (o, k) {
+      var ok = q.a.indexOf(k) >= 0;
+      return '<div class="opt' + (q.a.length > 1 ? ' sq' : '') + (ok ? ' right' : '') + '"><span class="mk">' + (ok ? '✓' : LETTERS[k]) + '</span><span>' + esc(o) + '</span></div>';
+    }).join('');
+    var src = q.src === 1 ? '<span class="pill ok">🎯 من الاختبار الحقيقي</span>' : q.src === 2 ? '<span class="pill">🧪 اختبار تجريبي</span>' : '';
+    return '<div class="qcard" style="margin-bottom:12px"><div class="qmeta"><span class="qnum">' + num + '</span><span class="pill">الفصل ' + q.c + '</span>' + src +
+      (q.a.length > 1 ? '<span class="pill warn">✌️ ' + q.a.length + ' إجابات</span>' : '') +
+      (q.note ? '<span class="pill warn">⚠️ تصحيح</span>' : '') + '</div><div class="qtext">' + esc(q.q) + '</div><div class="opts">' + opts + '</div>' +
+      (q.note ? '<div class="explain bad"><b>⚠️ انتبهي</b><p style="margin:6px 0 0">' + esc(q.note) + '</p></div>' : '') +
+      '<div class="explain"><b>💡 ' + (q.s ? 'لماذا هذه الإجابة؟' : 'الشرح') + '</b><p style="margin:6px 0 0">' + esc(q.e) + '</p>' +
+      (q.s ? '<div class="scen-mini"><b>🎬 سيناريو بسيط</b><p style="margin:4px 0 0">' + esc(q.s) + '</p></div>' : '') +
+      '<span class="ref">📖 المصدر: ' + esc(q.r) + '</span></div></div>';
+  }
+
   function oldExam(filter) {
     filter = filter || 0;
     var list = OLDQ.filter(function (q) { return !filter || q.c === filter; });
     var chs = CHAPTERS.filter(function (c) { return OLDQ.some(function (q) { return q.c === c.n; }); });
     var fixed = OLDQ.filter(function (q) { return q.note; }).length;
-    var cards = list.map(function (q) {
-      var opts = q.o.map(function (o, k) {
-        var ok = q.a.indexOf(k) >= 0;
-        return '<div class="opt' + (q.a.length > 1 ? ' sq' : '') + (ok ? ' right' : '') + '"><span class="mk">' + (ok ? '✓' : LETTERS[k]) + '</span><span>' + esc(o) + '</span></div>';
-      }).join('');
-      return '<div class="qcard" style="margin-bottom:12px"><div class="qmeta"><span class="qnum">' + q.id.slice(4) + '</span><span class="pill">الفصل ' + q.c + '</span>' +
-        (q.note ? '<span class="pill warn">⚠️ تصحيح</span>' : '') + '</div><div class="qtext">' + esc(q.q) + '</div><div class="opts">' + opts + '</div>' +
-        (q.note ? '<div class="explain bad"><b>⚠️ انتبهي</b><p style="margin:6px 0 0">' + esc(q.note) + '</p></div>' : '') +
-        '<div class="explain"><b>💡 الشرح</b><p style="margin:6px 0 0">' + esc(q.e) + '</p><span class="ref">📖 المصدر: ' + esc(q.r) + '</span></div></div>';
-    }).join('');
+    var cards = list.map(function (q) { return answerCard(q, q.id.slice(4)); }).join('');
+    var real = OLDQ.filter(function (q) { return q.src === 1; }).length;
     render(
       '<h1>🗂️ الاختبار السابق</h1>' +
-      '<div class="card"><p>هذه أسئلة الاختبار الحقيقي السابق (' + OLDQ.length + ' سؤالاً بعد حذف المكرر)، مع الإجابة الصحيحة حسب الكتاب والشرح والمصدر.</p>' +
-      '<p class="muted small">في ' + fixed + ' أسئلة كانت الإجابة المعلَّمة في الصور مخالفة للكتاب، وصحّحناها ووضعنا عليها علامة ⚠️.</p>' +
+      (T.key === 'credit'
+        ? '<div class="card"><p>هنا <b>' + real + '</b> سؤالاً من محاولتك الأولى في الاختبار الحقيقي 🎯، و<b>' + (OLDQ.length - real) + '</b> سؤالاً من الاختبار التجريبي (المستشار المصرفي) 🧪، وكلها مجابة من الكتاب مع السيناريو والصفحة.</p>' +
+          '<p class="muted small">في ' + fixed + ' أسئلة كانت الإجابة المتداولة أو المعلَّمة مخالفة للكتاب، فصحّحناها ووضعنا عليها علامة ⚠️ — اعتمدي إجابة الكتاب.</p>'
+        : '<div class="card"><p>هذه أسئلة الاختبار الحقيقي السابق (' + OLDQ.length + ' سؤالاً بعد حذف المكرر)، مع الإجابة الصحيحة حسب الكتاب والشرح والمصدر.</p>' +
+          '<p class="muted small">في ' + fixed + ' أسئلة كانت الإجابة المعلَّمة في الصور مخالفة للكتاب، وصحّحناها ووضعنا عليها علامة ⚠️.</p>') +
       '<div class="row"><button class="btn" data-act="oldtest" data-p="0">📝 اختبري نفسك بها</button><button class="btn ghost" data-act="oldtest" data-p="1">🎯 تدريب فوري</button></div></div>' +
       '<div class="filters" id="of"><button data-f="0" class="' + (!filter ? 'on' : '') + '">الكل</button>' +
       chs.map(function (c) { return '<button data-f="' + c.n + '" class="' + (filter === c.n ? 'on' : '') + '">الفصل ' + c.n + '</button>'; }).join('') + '</div>' +
       cards + footer(), 'old');
     document.getElementById('of').addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (b) oldExam(+b.getAttribute('data-f'));
+    });
+  }
+
+  // Landing page: pick which certificate to study. Each one keeps its own exams, mistakes and history.
+  function tracks() {
+    var cur = savedTrack();
+    var cards = ['retail', 'credit'].map(function (k) {
+      var t = TRACKS[k];
+      return '<button class="trackcard' + (cur === k ? ' on' : '') + '" data-track="' + k + '"><span class="ic">' + t.icon + '</span>' +
+        '<span class="body"><b>' + esc(t.name) + '</b><span class="muted small">' + esc(t.book) + '</span>' +
+        '<span class="small">' + t.QB.length + ' سؤالاً · ' + t.CHAPTERS.length + ' فصول' + (t.SCEN ? ' · ' + t.SCEN.length + ' سيناريو' : '') + '</span></span>' +
+        (cur === k ? '<span class="pill ok">الحالي</span>' : '') + '</button>';
+    }).join('');
+    stopTimer();
+    app.innerHTML = '<div class="fade">' +
+      '<section class="hero"><h1>أهلاً يا جنى 👋</h1><p>اختاري الاختبار الذي تذاكرين له. كل قسم له اختباراته وأخطاؤه وسجله الخاص، ولا يختلط بالآخر.</p></section>' +
+      '<div class="grid two">' + cards + '</div>' +
+      '<p class="muted small" style="margin-top:12px">تقدر تغيّرين الاختبار في أي وقت من زر 🔀 أعلى الصفحة.</p>' + footer() + '</div>';
+    setNav('tracks');
+    document.getElementById('trackName').textContent = 'للتدريب المصرفي';
+    window.scrollTo(0, 0);
+  }
+
+  function mocksPicker() {
+    var best = {};
+    S.history.forEach(function (h) { if (h.type === 'mock') best[h.seed] = Math.max(best[h.seed] || 0, h.pct); });
+    var list = range(T.mocks).map(function (i) {
+      var n = i + 1, b = best[n];
+      return '<button class="chap" data-mock="' + n + '"><span class="num">' + n + '</span><span class="body"><b>نموذج اختبار ' + n + '</b>' +
+        '<span class="muted small">100 سؤال · ' + FULL_MINUTES + ' دقيقة · ' + (b === undefined ? 'لم تجربيه بعد' : 'أفضل نتيجة: ' + b + '%') + '</span></span>' +
+        (b !== undefined ? '<span class="pill ' + (b >= PASS ? 'ok' : 'bad') + '">' + b + '%</span>' : '') + '</button>';
+    }).join('');
+    openModal('<div class="box"><h2>🧪 نماذج الاختبارات</h2><p class="muted small">كل نموذج له أسئلته الثابتة بنفس توزيع الاختبار الحقيقي على الفصول، والترتيب يتغير في كل محاولة.</p>' +
+      '<div class="grid">' + list + '</div><button class="btn ghost block" style="margin-top:12px" data-m="close">إغلاق</button></div>', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      if (b.getAttribute('data-m') === 'close') return closeModal();
+      var n = +b.getAttribute('data-mock');
+      if (!n) return;
+      closeModal();
+      var go = function () { startExam({ type: 'mock', seed: n, title: 'نموذج اختبار ' + n, minutes: FULL_MINUTES }); };
+      if (S.active) confirmBox('بدء اختبار جديد؟', 'سيتم إلغاء الاختبار غير المكتمل.', 'ابدئي', go); else go();
+    });
+  }
+
+  function chapterFilter(id, cur, counts) {
+    return '<div class="filters" id="' + id + '"><button data-f="0" class="' + (!cur ? 'on' : '') + '">الكل</button>' +
+      CHAPTERS.map(function (c) {
+        return '<button data-f="' + c.n + '" class="' + (cur === c.n ? 'on' : '') + '">الفصل ' + c.n + (counts ? ' (' + counts(c.n) + ')' : '') + '</button>';
+      }).join('') + '</div>';
+  }
+
+  // Scenarios: every key definition explained simply, with a short story and the book page.
+  function scenarios(filter) {
+    filter = filter || 0;
+    var list = T.SCEN.filter(function (x) { return !filter || x.c === filter; });
+    var cards = list.map(function (x) {
+      var tbl = x.tbl ? '<div class="tblwrap"><table class="brk cmp"><tr>' + x.tbl[0].map(function (h) { return '<th>' + esc(h) + '</th>'; }).join('') + '</tr>' +
+        x.tbl.slice(1).map(function (r) { return '<tr>' + r.map(function (c, i) { return i ? '<td>' + esc(c) + '</td>' : '<th>' + esc(c) + '</th>'; }).join('') + '</tr>'; }).join('') + '</table></div>' : '';
+      return '<details class="acc scen"><summary><span class="pill">الفصل ' + x.c + '</span> ' + esc(x.t) + '</summary><div>' +
+        '<div class="explain"><b>💡 ببساطة</b><p style="margin:6px 0 0">' + esc(x.d) + '</p></div>' +
+        '<div class="explain story"><b>🎬 السيناريو</b><p style="margin:6px 0 0">' + esc(x.s) + '</p></div>' + tbl +
+        (x.k ? '<div class="explain bad"><b>🪤 فخ الاختبار</b><p style="margin:6px 0 0">' + esc(x.k) + '</p></div>' : '') +
+        '<span class="ref">📖 المصدر: ' + esc(x.r) + '</span></div></details>';
+    }).join('');
+    render(
+      '<h1>🎬 السيناريوهات</h1>' +
+      '<div class="card"><p>كل فكرة مهمة في الكتاب بثلاث خطوات: <b>ببساطة</b> ← <b>قصة من الواقع</b> ← <b>فخ الاختبار</b>، مع رقم الصفحة. اضغطي على أي عنوان لفتحه.</p></div>' +
+      chapterFilter('sf', filter, function (n) { return T.SCEN.filter(function (x) { return x.c === n; }).length; }) +
+      '<div class="row" style="margin-bottom:10px"><button class="btn sm ghost" id="openAll">فتح الكل</button><button class="btn sm ghost" id="closeAll">إغلاق الكل</button></div>' +
+      cards + footer(), 'scen');
+    document.getElementById('sf').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (b) scenarios(+b.getAttribute('data-f'));
+    });
+    document.getElementById('openAll').addEventListener('click', function () { app.querySelectorAll('details.scen').forEach(function (d) { d.open = true; }); });
+    document.getElementById('closeAll').addEventListener('click', function () { app.querySelectorAll('details.scen').forEach(function (d) { d.open = false; }); });
+  }
+
+  // Question bank: every question with the correct answer, why, a simple scenario and the page.
+  function bank(filter, query) {
+    filter = filter === undefined ? 1 : filter;
+    query = query || '';
+    var norm = function (s) { return String(s).replace(/[إأآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').toLowerCase(); };
+    var nq = norm(query.trim());
+    var list = QB.filter(function (q) {
+      if (filter && q.c !== filter) return false;
+      if (!nq) return true;
+      return norm(q.q + ' ' + q.o.join(' ') + ' ' + q.e + ' ' + q.s + ' ' + q.r).indexOf(nq) >= 0;
+    });
+    render(
+      '<h1>📖 بنك الأسئلة والإجابات</h1>' +
+      '<div class="card"><p>كل أسئلة التدريب والاختبارات (' + QB.length + ' سؤالاً) مع <b>الإجابة الصحيحة</b> و<b>لماذا</b> و<b>سيناريو بسيط</b> و<b>رقم الصفحة</b> في الكتاب.</p>' +
+      '<input id="bq" class="search" type="search" placeholder="🔎 ابحثي بكلمة (مثال: الإجارة، 30%، سمة)" value="' + esc(query) + '"></div>' +
+      chapterFilter('bf', filter, function (n) { return QB.filter(function (q) { return q.c === n; }).length; }) +
+      '<p class="muted small">' + list.length + ' سؤالاً</p><div id="bl">' +
+      (list.length ? list.map(function (q, i) { return answerCard(q, i + 1); }).join('') : '<div class="card empty">لا توجد نتائج 🔎</div>') +
+      '</div>' + footer(), 'bank');
+    document.getElementById('bf').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (b) bank(+b.getAttribute('data-f'), document.getElementById('bq').value);
+    });
+    var timer;
+    document.getElementById('bq').addEventListener('input', function () {
+      var v = this.value;
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        bank(v.trim() ? 0 : filter, v);
+        var el = document.getElementById('bq'); el.focus(); el.setSelectionRange(v.length, v.length);
+      }, 350);
     });
   }
 
@@ -307,24 +516,8 @@
       return '<details class="acc"' + (i === 0 ? ' open' : '') + '><summary>' + esc(g[0]) + '</summary><div><table class="numtable">' +
         g[1].map(function (r) { return '<tr><td>' + esc(r[0]) + '</td><td>' + esc(r[1]) + '</td></tr>'; }).join('') + '</table></div></details>';
     }).join('');
-    var plan = [
-      ['الأسبوع الأول', 'الفصل 2 كاملاً (25% من الاختبار): اختبار فصل بوضع التدريب الفوري يومياً + جدول الأرقام.'],
-      ['الأسبوع الثاني', 'الفصول 10 ثم 4 ثم 6 (35% من الاختبار). راجعي بنك الأخطاء نهاية كل يوم.'],
-      ['الأسبوع الثالث', 'الفصول 1، 3، 5، 7، 8، 9. ثم اختبار شامل كل يومين.'],
-      ['آخر 3 أيام', 'اختبار شامل يومياً، ثم بنك الأخطاء، ثم جدول الأرقام. ليلة الاختبار: مراجعة خفيفة ونوم مبكر.']
-    ].map(function (p) { return '<tr><td>' + p[0] + '</td><td>' + p[1] + '</td></tr>'; }).join('');
-    var traps = [
-      ['النوافذ الإسلامية', '«غير مستقلة» قانونياً. أي خيار فيه «مستقلة» خطأ.'],
-      ['الراتب والدخل', 'نسب التحمل تُحسب من إجمالي «الدخل الشهري» والاستقطاع من إجمالي «الراتب». لا تخلطي بينهما.'],
-      ['الشيك', 'حروف مقابل أرقام: الحروف. تكرار واختلاف: الأقل.'],
-      ['القاصر', 'السنوات «هجرية» وليست ميلادية.'],
-      ['يوم عمل ويوم تقويمي', 'التمويل الاستهلاكي: الانسحاب خلال 10 أيام «عمل». بطاقة الائتمان: الإلغاء خلال 10 أيام. التعثر 90 يوماً «تقويمياً».'],
-      ['مراحل غسل الأموال', 'إيداع ← تغطية ← دمج. أما تمويل الإرهاب فمراحله: جمع ← نقل ← استخدام.'],
-      ['المضاربة والمشاركة', 'المضاربة: رب المال وحده يتحمل الخسارة. المشاركة: كل شريك بقدر حصته.'],
-      ['التورق والتوريق', 'التورق = سيولة (شراء آجل وبيع نقدي). التوريق/التصكيك = إصدار صكوك.'],
-      ['المركزي والحكومة', 'البنك المركزي «مصرف الحكومة»، لكن «إقراض الحكومة» محظور عليه.'],
-      ['من يعتمد ماذا', 'سياسة الالتزام يعتمدها مجلس الإدارة. الإدارة الفعالة للمخاطر على الإدارة العليا. إدارة الالتزام تضع السياسة وتساعد.']
-    ].map(function (p) { return '<tr><td>' + p[0] + '</td><td>' + p[1] + '</td></tr>'; }).join('');
+    var plan = T.plan.map(function (p) { return '<tr><td>' + p[0] + '</td><td>' + p[1] + '</td></tr>'; }).join('');
+    var traps = T.traps.map(function (p) { return '<tr><td>' + p[0] + '</td><td>' + p[1] + '</td></tr>'; }).join('');
     render(
       '<h1>💡 نصائح وحيل لجنى</h1>' +
       '<div class="hero" style="padding:18px"><h2 style="color:#fff">رسالة من عبدالله 🤍</h2><p>جنى، الاختبار ليس أصعب منك. كل سؤال هنا مكتوب من الكتاب نفسه، وكل خطأ ترتكبينه هنا هو خطأ لن ترتكبيه في الاختبار الحقيقي. ذاكري بهدوء وثقي بنفسك.</p><div class="trust">Abdullah Trusts you ✨</div></div>' +
@@ -387,7 +580,8 @@
     if (checked) {
       var ok = isRight(q, sel);
       explain = '<div class="explain' + (ok ? '' : ' bad') + '"><b>' + (ok ? '✅ إجابة صحيحة! أحسنتِ يا جنى' : '❌ الإجابة الصحيحة: ' + q.a.map(function (x) { return esc(q.o[x]); }).join(' + ')) + '</b>' +
-        '<p style="margin:6px 0 0">' + esc(q.e) + '</p><span class="ref">📖 ' + esc(q.r) + '</span></div>';
+        '<p style="margin:6px 0 0">' + esc(q.e) + '</p>' + (q.s ? '<div class="scen-mini"><b>🎬 سيناريو بسيط</b><p style="margin:4px 0 0">' + esc(q.s) + '</p></div>' : '') +
+        '<span class="ref">📖 ' + esc(q.r) + '</span></div>';
     }
 
     var isLast = i === E.qs.length - 1;
@@ -494,7 +688,7 @@
       return { id: q.id, order: it.order, sel: sel, ok: ok, flag: !!E.flags[k] };
     });
     var rec = {
-      id: 'h' + Date.now(), type: E.type, title: E.title, date: Date.now(),
+      id: 'h' + Date.now(), type: E.type, title: E.title, date: Date.now(), seed: E.seed || 0,
       dur: Math.round((Date.now() - E.start) / 1000), total: E.qs.length, correct: correct,
       pct: pct(correct, E.qs.length), perCh: perCh, answers: answers
     };
@@ -572,7 +766,10 @@
     return '<div class="qcard"><div class="qmeta"><span class="qnum">' + (a.k + 1) + '</span><span class="pill">الفصل ' + q.c + '</span>' +
       '<span class="pill ' + (a.ok ? 'ok' : 'bad') + '">' + (a.ok ? 'صحيحة' : a.sel.length ? 'خاطئة' : 'لم تُجب') + '</span></div>' +
       '<div class="qtext">' + esc(q.q) + '</div><div class="opts">' + opts + '</div>' +
-      '<div class="explain' + (a.ok ? '' : ' bad') + '"><b>💡 الشرح والتصحيح</b><p style="margin:6px 0 0">' + esc(q.e) + '</p><span class="ref">📖 المصدر: ' + esc(q.r) + '</span></div></div>';
+      '<div class="explain' + (a.ok ? '' : ' bad') + '"><b>💡 الشرح والتصحيح</b><p style="margin:6px 0 0">' + esc(q.e) + '</p>' +
+      (q.s ? '<div class="scen-mini"><b>🎬 سيناريو بسيط</b><p style="margin:4px 0 0">' + esc(q.s) + '</p></div>' : '') +
+      (q.note ? '<p class="small" style="margin:8px 0 0"><b>⚠️</b> ' + esc(q.note) + '</p>' : '') +
+      '<span class="ref">📖 المصدر: ' + esc(q.r) + '</span></div></div>';
   }
 
   // ---------------- modal / misc ----------------
@@ -614,7 +811,7 @@
     var blob = new Blob([JSON.stringify(S)], { type: 'application/json' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'jana-progress-' + new Date().toISOString().slice(0, 10) + '.json';
+    a.download = 'jana-' + T.key + '-progress-' + new Date().toISOString().slice(0, 10) + '.json';
     document.body.appendChild(a); a.click(); a.remove();
   }
   function importData(e) {
@@ -636,9 +833,12 @@
     if (go && !modal.contains(go)) {
       var v = go.getAttribute('data-go');
       if (document.body.classList.contains('in-exam')) return;
-      ({ home: home, chapters: chapters, mistakes: mistakes, tips: tips, history: history, old: function () { oldExam(0); } })[v]();
+      ({ home: home, chapters: chapters, mistakes: mistakes, tips: tips, history: history, old: function () { oldExam(0); },
+        tracks: tracks, scen: function () { scenarios(0); }, bank: function () { bank(1, ''); } })[v]();
       return;
     }
+    var tr = e.target.closest('[data-track]');
+    if (tr && !modal.contains(tr)) { useTrack(tr.getAttribute('data-track'), true); home(); return; }
     if (document.body.classList.contains('in-exam') && app.contains(e.target)) { examClick(e); return; }
     var b = e.target.closest('[data-act]');
     if (!b || modal.contains(b)) return;
@@ -651,6 +851,7 @@
     } else if (act === 'quick') startExam({ type: 'quick', title: 'تدريب سريع', count: 20, practice: true });
     else if (act === 'chapter') chapterSetup([+b.getAttribute('data-ch')]);
     else if (act === 'multi') multiPicker();
+    else if (act === 'mocks') mocksPicker();
     else if (act === 'oldtest') startExam({ type: 'old', title: 'الاختبار السابق', practice: b.getAttribute('data-p') === '1', minutes: b.getAttribute('data-p') === '1' ? 0 : OLDQ.length });
     else if (act === 'resume') showExam();
     else if (act === 'discard') confirmBox('إلغاء الاختبار؟', 'لن تُحفظ نتيجة هذا الاختبار.', 'إلغاء الاختبار', function () { S.active = null; save(); home(); });
@@ -678,5 +879,7 @@
     else if (e.key === 'ArrowRight') { var pv = app.querySelector('[data-x="prev"]'); if (pv && !pv.disabled) pv.click(); }
   });
 
-  home();
+  // Opening the site always starts on the certificate picker, so both sections are clear.
+  useTrack(savedTrack() || 'retail', false);
+  tracks();
 })();
