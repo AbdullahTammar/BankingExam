@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#5b4bdb">
 <title>بوصلة جنى</title>
-<meta name="description" content="اختبارات تدريبية لشهادة الخدمات المصرفية للأفراد – مُعدّة خصيصاً لجنى تمّار">
+<meta name="description" content="اختبارات تدريبية لشهادتي الخدمات المصرفية للأفراد والمستشار الائتماني – مُعدّة خصيصاً لجنى تمّار">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
@@ -23,28 +23,15 @@
 <header class="topbar">
   <button class="brand" data-go="home" aria-label="الرئيسية">
     <img class="logo" src="icons/logo.svg" alt="" width="38" height="38">
-    <span><b>بوصلة جنى</b><small>للتدريب المصرفي</small></span>
+    <span><b>بوصلة جنى</b><small id="trackName">للتدريب المصرفي</small></span>
   </button>
-  <nav class="nav">
-    <button data-go="home">الرئيسية</button>
-    <button data-go="chapters">الفصول</button>
-    <button data-go="old">الاختبار السابق</button>
-    <button data-go="mistakes">أخطائي</button>
-    <button data-go="tips">نصائح</button>
-    <button data-go="history">سجلي</button>
-  </nav>
+  <nav class="nav"></nav>
+  <button class="switch" data-go="tracks" aria-label="تغيير الاختبار">🔀 <span>تغيير الاختبار</span></button>
 </header>
 
 <main id="app" tabindex="-1"></main>
 
-<nav class="bottomnav" aria-label="التنقل">
-  <button data-go="home"><span>🏠</span>الرئيسية</button>
-  <button data-go="chapters"><span>📚</span>الفصول</button>
-  <button data-go="old"><span>🗂️</span>السابق</button>
-  <button data-go="mistakes"><span>🔁</span>أخطائي</button>
-  <button data-go="tips"><span>💡</span>نصائح</button>
-  <button data-go="history"><span>📈</span>سجلي</button>
-</nav>
+<nav class="bottomnav" aria-label="التنقل"></nav>
 
 <div id="modal" class="modal" hidden></div>
 
@@ -61,6 +48,15 @@
 <script src="data/ch9.js"></script>
 <script src="data/ch10.js"></script>
 <script src="data/oldexam.js"></script>
+<script src="data/credit/_init.js"></script>
+<script src="data/credit/meta.js"></script>
+<script src="data/credit/ch1.js"></script>
+<script src="data/credit/ch2.js"></script>
+<script src="data/credit/ch3.js"></script>
+<script src="data/credit/ch4.js"></script>
+<script src="data/credit/ch5.js"></script>
+<script src="data/credit/oldexam.js"></script>
+<script src="data/credit/scenarios.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
